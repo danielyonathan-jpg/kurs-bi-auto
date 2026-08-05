@@ -20,7 +20,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install cloudscraper requests
+          pip install cloudscraper requests beautifulsoup4
 
       - name: Run Scraper
         run: python scraper.py
