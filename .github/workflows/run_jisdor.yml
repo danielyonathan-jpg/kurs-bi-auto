@@ -1,0 +1,28 @@
+name: Update Kurs JISDOR
+
+on:
+  schedule:
+    # 15 = Menit ke-15
+    # 9 = Jam 09:00 UTC (Sama dengan Jam 16:00 WIB)
+    # Sehingga 09:15 UTC = 16:15 WIB Sore (Senin - Jumat)
+    - cron: '15 9 * * 1-5'
+  workflow_dispatch: # Tombol eksekusi manual
+
+jobs:
+  scrape-jisdor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install cloudscraper requests beautifulsoup4
+
+      - name: Run Scraper JISDOR
+        run: python scraper_jisdor.py
