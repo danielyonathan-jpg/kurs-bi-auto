@@ -1,13 +1,13 @@
 import cloudscraper
 from bs4 import BeautifulSoup
 import requests
-import json
+import re
 
 # ⚠️ TEMPELKAN URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI
 WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzU2RW2Or2gi_qTWca5hfwZyLHXLpD5vUkWNrERudTyrdz3NZrCOQSQgip9JFIv-8LF/exec"
 
 def parse_num(val_str):
-    """Mengubah format angka Indonesia (15.800,00) menjadi float (15800.00)"""
+    """Mengubah format angka Indonesia menjadi desimal murni"""
     val_str = val_str.strip().replace('.', '').replace(',', '.')
     return float(val_str)
 
@@ -25,28 +25,24 @@ def main():
         print(f"Gagal mengakses BI. Status code: {response.status_code}")
         return
 
-    # Parsing struktur DOM HTML menggunakan BeautifulSoup
     soup = BeautifulSoup(response.text, 'html.parser')
-    
-    list_mata_uang = [
-        "USD", "SGD", "EUR", "JPY", "AUD", "HKD", "MYR", "GBP", 
-        "CAD", "CHF", "CNY", "DKK", "NZD", "SAR", "SEK", "THB"
-    ]
-    
     data_extracted = []
     
-    # Cari seluruh baris tabel (tr)
     rows = soup.find_all('tr')
     
     for row in rows:
-        # Ambil teks murni dari setiap kolom (td) dalam baris tersebut
         cols = [td.get_text(strip=True) for td in row.find_all('td')]
         
-        # Baris tabel kurs BI memiliki minimal 4 kolom (Mata Uang, Nilai, Jual, Beli)
+        # Jika baris memiliki minimal 4 kolom (Mata Uang, Nilai, Jual, Beli)
         if len(cols) >= 4:
-            code = cols[0].upper()
             
-            if code in list_mata_uang:
+            # Bersihkan kolom pertama hanya menyisakan Huruf Alfabet (A-Z)
+            # Ini berguna jika ada spasi tersembunyi atau simbol bintang (misal: "USD *")
+            raw_code = cols[0].upper()
+            code = re.sub(r'[^A-Z]', '', raw_code)
+            
+            # Ambil HANYA yang tepat 3 huruf (Standar mata uang: AED, USD, VND, dll)
+            if len(code) == 3:
                 try:
                     nilai = parse_num(cols[1])
                     jual = parse_num(cols[2])
@@ -63,7 +59,7 @@ def main():
                 except Exception as e:
                     print(f"Gagal memproses {code}: {e}")
 
-    print(f"Berhasil menarik {len(data_extracted)} data kurs eksak dari BI!")
+    print(f"Berhasil menarik {len(data_extracted)} data kurs (Mulai dari AED hingga VND)!")
     
     if len(data_extracted) > 0:
         print("Mengirimkan data ke Google Sheets...")
