@@ -1,10 +1,15 @@
 import cloudscraper
-import re
+from bs4 import BeautifulSoup
 import requests
 import json
 
 # ⚠️ TEMPELKAN URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI
 WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzU2RW2Or2gi_qTWca5hfwZyLHXLpD5vUkWNrERudTyrdz3NZrCOQSQgip9JFIv-8LF/exec"
+
+def parse_num(val_str):
+    """Mengubah format angka Indonesia (15.800,00) menjadi float (15800.00)"""
+    val_str = val_str.strip().replace('.', '').replace(',', '.')
+    return float(val_str)
 
 def main():
     print("Membuka Web Bank Indonesia via Cloudscraper...")
@@ -20,7 +25,8 @@ def main():
         print(f"Gagal mengakses BI. Status code: {response.status_code}")
         return
 
-    html = response.text
+    # Parsing struktur DOM HTML menggunakan BeautifulSoup
+    soup = BeautifulSoup(response.text, 'html.parser')
     
     list_mata_uang = [
         "USD", "SGD", "EUR", "JPY", "AUD", "HKD", "MYR", "GBP", 
@@ -29,30 +35,33 @@ def main():
     
     data_extracted = []
     
-    for curr in list_mata_uang:
-        pattern = rf"{curr}[^\d]*?([\d.,]+)[^\d]*?([\d.,]+)[^\d]*?([\d.,]+)"
-        match = re.search(pattern, html, re.IGNORECASE)
+    # Cari seluruh baris tabel (tr)
+    rows = soup.find_all('tr')
+    
+    for row in rows:
+        # Ambil teks murni dari setiap kolom (td) dalam baris tersebut
+        cols = [td.get_text(strip=True) for td in row.find_all('td')]
         
-        if match:
-            nilai_str = match.group(1).replace('.', '').replace(',', '.')
-            jual_str = match.group(2).replace('.', '').replace(',', '.')
-            beli_str = match.group(3).replace('.', '').replace(',', '.')
+        # Baris tabel kurs BI memiliki minimal 4 kolom (Mata Uang, Nilai, Jual, Beli)
+        if len(cols) >= 4:
+            code = cols[0].upper()
             
-            try:
-                nilai = float(nilai_str)
-                jual = float(jual_str)
-                beli = float(beli_str)
-                avg = (jual + beli) / 2.0
-                
-                data_extracted.append({
-                    "mataUang": curr,
-                    "nilai": nilai,
-                    "jual": jual,
-                    "beli": beli,
-                    "average": avg
-                })
-            except ValueError:
-                continue
+            if code in list_mata_uang:
+                try:
+                    nilai = parse_num(cols[1])
+                    jual = parse_num(cols[2])
+                    beli = parse_num(cols[3])
+                    avg = (jual + beli) / 2.0
+                    
+                    data_extracted.append({
+                        "mataUang": code,
+                        "nilai": nilai,
+                        "jual": jual,
+                        "beli": beli,
+                        "average": avg
+                    })
+                except Exception as e:
+                    print(f"Gagal memproses {code}: {e}")
 
     print(f"Berhasil menarik {len(data_extracted)} data kurs eksak dari BI!")
     
