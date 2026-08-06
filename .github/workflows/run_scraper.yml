@@ -3,7 +3,7 @@ name: Update Kurs Transaksi BI
 on:
   schedule:
     # Otomatis berjalan setiap hari Senin-Jumat pukul 09:00 WIB (02:00 UTC)
-    - cron: '0 2 2 * * 1-5'
+    - cron: '12 2 * * 1-5'
   workflow_dispatch: # Memungkinkan eksekusi manual via tombol
 
 jobs:
