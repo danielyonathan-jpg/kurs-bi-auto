@@ -3,7 +3,7 @@ name: Update KTBI
 on:
   schedule:
     # Berjalan jam 09:12 WIB (02:12 UTC) Senin - Jumat
-    - cron: '12 2 * * 1-5'
+    - cron: '12 0 * * 1-5'
   workflow_dispatch:
 
 jobs:
